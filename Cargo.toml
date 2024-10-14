@@ -1,0 +1,10 @@
+[package]
+name = "vite_for_rust"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+regex = "1.11.0"
+serde = { version = "1.0.210", features = ["derive", "std"] }
+serde_json = "1.0"
+log = "0.4.22"
