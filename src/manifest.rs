@@ -48,11 +48,13 @@ impl Manifest {
         entrypoints
             .into_iter()
             .for_each(|entry| {
-                let entry_as_asset = Asset::EntryPoint(entry.to_string());
-                if discovered_assets.contains(&entry_as_asset) { return; }
-                discovered_assets.insert(entry_as_asset);            
-                
-                self.iterate_over_chunk_assets(&mut discovered_assets, &entry.to_string())
+                let entry_chunk = &self.manifest[entry];
+                let entry_as_asset = Asset::EntryPoint(entry_chunk.file.clone());
+
+                if !discovered_assets.contains(&entry_as_asset) {
+                    discovered_assets.insert(entry_as_asset);
+                    self.iterate_over_chunk_assets(&mut discovered_assets, entry_chunk);
+                }
             });
 
         let mut assets = discovered_assets.into_iter().collect::<Vec<Asset>>();
@@ -67,8 +69,7 @@ impl Manifest {
             ");
     }
 
-    fn iterate_over_chunk_assets(&self, set: &mut HashSet<Asset>, entry: &String) {
-        let chunk: &Chunk = &self.manifest[entry];
+    fn iterate_over_chunk_assets(&self, set: &mut HashSet<Asset>, chunk: &Chunk) {
         for asset in chunk.assets_iter() {
             if !set.contains(&asset) {
                 set.insert(asset);
@@ -77,8 +78,9 @@ impl Manifest {
 
         if chunk.is_entry {
             chunk.imports.iter().for_each(|import| {
-                set.insert(Asset::Preload(import.clone()));
-                self.iterate_over_chunk_assets(set, import);
+                let import_chunk = &self.manifest[import];
+                set.insert(Asset::Preload(import_chunk.file.clone()));
+                self.iterate_over_chunk_assets(set, import_chunk);
             });
         }
     }
@@ -89,16 +91,30 @@ mod test {
     use super::Manifest;
 
     #[test]
-    fn test_generate_html_tags() {
+    fn test_generate_html_tags_1() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
         let expected =
         
             r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
             <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
-            <script type="module" src="views/foo.js"></script>
-            <link rel="modulepreload" href="_shared-B7PI925R.js" />"#;
+            <script type="module" src="assets/foo-BRBmoGS9.js"></script>
+            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
 
         let generated = manifest.generate_html_tags(vec!["views/foo.js"]);
+
+        assert_eq!(expected, generated);
+    }
+
+    #[test]
+    fn test_generate_html_tags_2() {
+        let manifest = Manifest::new("tests/test-manifest.json").unwrap();
+        let expected =
+        
+            r#"<link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="assets/bar-gkvgaI9m.js"></script>
+            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
+
+        let generated = manifest.generate_html_tags(vec!["views/bar.js"]);
 
         assert_eq!(expected, generated);
     }
