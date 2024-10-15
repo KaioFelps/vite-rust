@@ -1,6 +1,6 @@
 #![allow(unused)]
 use serde::Deserialize;
-use crate::asset::Asset;
+use crate::{asset::Asset, manifest::{self, Manifest}};
 
 // All strings are Strings instead of &'lf str
 // because serde can't borrow data from the Deserializer
@@ -64,7 +64,6 @@ pub(crate) struct Chunk {
 #[derive(PartialEq)]
 enum ChunkIterListTrack {
     Assets,
-    Imports,
     Css,
     EOT, // end-of-tracking
 }
@@ -78,15 +77,15 @@ impl ChunkIterListTrack {
 struct ChunkIter<'a> {
     assets: &'a [String],
     imports: &'a [String],
-    css: &'a [String],
     index: usize,
-    track: ChunkIterListTrack
+    css: &'a [String],
+    track: ChunkIterListTrack,
 }
 
 impl Chunk {
     /// Returns an [`Iterator<Item = Asset>`], where the returned assets
     /// are the Chunk's `assets`, `imports` and `css` fields, respectively.
-    pub fn assets_iter(&self) -> impl Iterator<Item = Asset> + '_ {
+    pub fn assets_iter<'a>(&'a self) -> impl Iterator<Item = Asset> + 'a {
         return ChunkIter {
             assets: &self.assets,
             imports: &self.imports,
@@ -105,16 +104,6 @@ impl<'a> Iterator for ChunkIter<'a> {
             if let Some(asset) = self.assets.get(self.index) {
                 self.index += 1;
                 return Some(Asset::Preload(asset.clone()))
-            } else {
-                self.track = ChunkIterListTrack::Imports;
-                self.index = 0;
-            }
-        }
-
-        if self.track == ChunkIterListTrack::Imports {
-            if let Some(import) = self.imports.get(self.index) {
-                self.index += 1;
-                return Some(Asset::Preload(import.clone()))
             } else {
                 self.track = ChunkIterListTrack::Css;
                 self.index = 0;

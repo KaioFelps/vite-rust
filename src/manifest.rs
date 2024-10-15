@@ -52,12 +52,7 @@ impl Manifest {
                 if discovered_assets.contains(&entry_as_asset) { return; }
                 discovered_assets.insert(entry_as_asset);            
                 
-                let chunk: &Chunk = &self.manifest[entry];
-                for asset in chunk.assets_iter() {
-                    if !discovered_assets.contains(&asset) {
-                        discovered_assets.insert(asset);
-                    }
-                }
+                self.iterate_over_chunk_assets(&mut discovered_assets, &entry.to_string())
             });
 
         let mut assets = discovered_assets.into_iter().collect::<Vec<Asset>>();
@@ -68,6 +63,43 @@ impl Manifest {
             .into_iter()
             .map(|asset| asset.to_html())
             .collect::<Vec<String>>()
-            .join("\n");
+            .join("
+            ");
+    }
+
+    fn iterate_over_chunk_assets(&self, set: &mut HashSet<Asset>, entry: &String) {
+        let chunk: &Chunk = &self.manifest[entry];
+        for asset in chunk.assets_iter() {
+            if !set.contains(&asset) {
+                set.insert(asset);
+            }
+        }
+
+        if chunk.is_entry {
+            chunk.imports.iter().for_each(|import| {
+                set.insert(Asset::Preload(import.clone()));
+                self.iterate_over_chunk_assets(set, import);
+            });
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::Manifest;
+
+    #[test]
+    fn test_generate_html_tags() {
+        let manifest = Manifest::new("tests/test-manifest.json").unwrap();
+        let expected =
+        
+            r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
+            <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="views/foo.js"></script>
+            <link rel="modulepreload" href="_shared-B7PI925R.js" />"#;
+
+        let generated = manifest.generate_html_tags(vec!["views/foo.js"]);
+
+        assert_eq!(expected, generated);
     }
 }
