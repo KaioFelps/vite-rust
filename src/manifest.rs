@@ -3,6 +3,7 @@ use std::collections::{HashMap, HashSet};
 use std::io::BufReader;
 use serde::Deserialize;
 
+
 use crate::asset::Asset;
 use crate::chunk::Chunk;
 use crate::error::{ViteError, ViteErrorKind};
@@ -39,23 +40,32 @@ impl Manifest {
 
     pub fn generate_html_tags(&self, entrypoints: Vec<&str>) -> String {
         if self.manifest.is_empty() {
-            log::warn!("Manifest is empty. Empty string being returned from `Manifest::generate_html_tags`.");
+            log::error!("Manifest is empty. Empty string being returned from `Manifest::generate_html_tags`.");
             return "".into();
         }
 
         let mut discovered_assets = HashSet::<Asset>::new();
 
-        entrypoints
-            .into_iter()
-            .for_each(|entry| {
-                let entry_chunk = &self.manifest[entry];
-                let entry_as_asset = Asset::EntryPoint(entry_chunk.file.clone());
+        for entry in entrypoints {
+            let entry_chunk = match self.manifest.get(entry) {
+                None => {
+                    log::error!(r#"Skipping invalid or unexisting entry "{entry}"."#);
+                    continue;
+                },
+                Some(chunk) => chunk,
+            };
 
-                if !discovered_assets.contains(&entry_as_asset) {
-                    discovered_assets.insert(entry_as_asset);
-                    self.iterate_over_chunk_assets(&mut discovered_assets, entry_chunk);
-                }
-            });
+            let entry_as_asset = if entry.ends_with(".css") {
+                Asset::StyleSheet(entry_chunk.file.clone())
+            } else {
+                Asset::EntryPoint(entry_chunk.file.clone())
+            };
+
+            if !discovered_assets.contains(&entry_as_asset) {
+                discovered_assets.insert(entry_as_asset);
+                self.iterate_over_chunk_assets(&mut discovered_assets, entry_chunk);
+            }
+        }
 
         let mut assets = discovered_assets.into_iter().collect::<Vec<Asset>>();
         // Puts the assets in the following order: stylesheets > entries > preloads
@@ -65,8 +75,7 @@ impl Manifest {
             .into_iter()
             .map(|asset| asset.to_html())
             .collect::<Vec<String>>()
-            .join("
-            ");
+            .join("\n");
     }
 
     fn iterate_over_chunk_assets(&self, set: &mut HashSet<Asset>, chunk: &Chunk) {
