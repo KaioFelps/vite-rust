@@ -6,6 +6,9 @@ mod vite;
 mod utils;
 mod config;
 
+#[cfg(test)]
+mod test_utils;
+
 const CLIENT_SCRIPT_PATH: &'static str = r#"@vite/client"#;
 
 pub use error::ViteError;
