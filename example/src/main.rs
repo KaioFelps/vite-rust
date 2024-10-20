@@ -1,12 +1,13 @@
-use vite_rust::ViteConfig;
+use vite_rust::{utils::resolve_path, ViteConfig};
 
 #[tokio::main]
 async fn main() {
     env_logger::init();
 
-    let mut vite_config = ViteConfig::new_with_defaults("example/dist/.vite/manifest.json");
+    let manifest_path = resolve_path(file!(), "../dist/.vite/manifest.json");
+    
+    let mut vite_config = ViteConfig::new_with_defaults(&manifest_path);
     vite_config.entrypoints = Some(vec!["src/www/main.tsx", "src/www/index.css"]);
-    vite_config.force_mode = Some(vite_rust::ViteMode::Manifest);
 
     let vite = vite_rust::Vite::new(vite_config).await;
 

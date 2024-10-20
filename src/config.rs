@@ -44,6 +44,11 @@ pub struct ViteConfig<'a> {
     /// your current working directory as the root of it and start the path
     /// with a root node directory directly.
     /// 
+    /// **Optionally and experimentally**, you can use the [`resolve_path`]
+    /// method for the manifest file resolution. However, this method might
+    /// come to fail at some point, and will also panic in the many situations
+    /// described on its documentation.
+    /// 
     /// # Example
     /// ```plaintext
     /// your_project/
@@ -56,9 +61,12 @@ pub struct ViteConfig<'a> {
     /// 
     /// ```ignore
     /// 
-    /// use vite_rust::ViteConfig;
+    /// use vite_rust::{ViteConfig, utils::resolve_path};
+    /// 
     /// let config = ViteConfig {
     ///     manifest_path: "public/dist/manifest.json",
+    ///     // or
+    ///     manifest_path: resolve_path(file!(), "../public/dist/manifest.json"),
     ///     // ...
     /// };
     /// ```
