@@ -1,6 +1,7 @@
 use std::fs::File;
 use std::collections::{HashMap, HashSet};
-use std::io::BufReader;
+use std::io::Read;
+use md5::{Digest, Md5};
 use serde::Deserialize;
 
 
@@ -9,14 +10,14 @@ use crate::chunk::Chunk;
 use crate::error::{ViteError, ViteErrorKind};
 
 #[derive(Deserialize, Debug)]
-#[serde(transparent)]
 pub(crate) struct Manifest {
     manifest: HashMap<String, Chunk>,
+    hash: String
 }
 
 impl Manifest {
     pub fn new(path: &str) -> Result<Self, ViteError> {
-        let file = match File::open(path) {
+        let mut file = match File::open(path) {
             Err(err) => {
                 return Err(ViteError::new(
                     format!("Failed to open manifest at {}: {}", path, err),
@@ -26,19 +27,58 @@ impl Manifest {
             Ok(file) => file,
         };
 
-        let reader = BufReader::new(file);
-        let manifest = serde_json::from_reader(reader);
+        let mut manifest_content= String::new();
+        if let Err(err) = file.read_to_string(&mut manifest_content) {
+            return Err(ViteError::new(
+                format!("Failed to read manifest.json content: {}", err),
+                ViteErrorKind::Manifest
+            ));
+        };
         
+        let hash = match Manifest::get_hash_from_manifest(&manifest_content) {
+            Ok(hash) => hash,
+            Err(err) => {
+                return Err(ViteError::new(
+                    format!("Failed to generate hash for manifest: {err}"),
+                    ViteErrorKind::Manifest
+                ))
+            }
+        };
+
+        let manifest = serde_json::from_str(&manifest_content);
+
         return match manifest {
             Err(err) => Err(ViteError::new(
                 format!("Failed to parse manifest json: {}", err),
                 ViteErrorKind::Manifest
             )),
-            Ok(manifest) => Ok(manifest)
+            Ok(manifest) => Ok(Manifest {
+                manifest,
+                hash,
+            })
         };
     }
 
-    pub fn generate_html_tags(&self, entrypoints: Vec<&str>) -> String {
+    fn get_hash_from_manifest(content: &str) -> Result<String, std::io::Error> {        
+        let mut hasher = Md5::new();
+        hasher.update(&content.as_bytes());
+        let hash = hasher.finalize();
+
+        let mut buffer = Vec::new();
+
+        for byte in hash.bytes() {
+            buffer.push(byte?);
+        }
+
+        Ok(hex::encode(&buffer))
+    }
+
+    #[inline]
+    pub fn get_hash(&self) -> &str {
+        &self.hash
+    }
+
+    pub fn generate_html_tags(&self, entrypoints: &Vec<String>) -> String {
         if self.manifest.is_empty() {
             log::error!("Manifest is empty. Empty string being returned from `Manifest::generate_html_tags`.");
             return "".into();
@@ -93,6 +133,19 @@ impl Manifest {
             });
         }
     }
+
+    /// Generates a list of keys of every chunk that `isEntry`.
+    pub(crate) fn get_manifest_entries<'a>(&'a self) -> Vec<&'a str> {
+        let mut entries = Vec::new();
+
+        for (key, chunk) in self.manifest.iter() {
+            if chunk.is_entry {
+                entries.push(key.as_str());
+            }
+        }
+
+        return entries;
+    }
 }
 
 #[cfg(test)]
@@ -109,7 +162,7 @@ mod test {
             <script type="module" src="assets/foo-BRBmoGS9.js"></script>
             <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
 
-        let generated = manifest.generate_html_tags(vec!["views/foo.js"]);
+        let generated = manifest.generate_html_tags(&vec!["views/foo.js".into()]);
 
         assert_eq!(expected, generated);
     }
@@ -123,7 +176,7 @@ mod test {
             <script type="module" src="assets/bar-gkvgaI9m.js"></script>
             <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
 
-        let generated = manifest.generate_html_tags(vec!["views/bar.js"]);
+        let generated = manifest.generate_html_tags(&vec!["views/bar.js".into()]);
 
         assert_eq!(expected, generated);
     }
