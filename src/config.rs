@@ -9,7 +9,7 @@ pub enum ViteMode {
 }
 
 impl ViteMode {
-    pub async fn discover<'a>(use_hb: bool, use_dev_server: bool, host: &'a str) -> ViteMode {
+    pub(crate) async fn discover<'a>(use_hb: bool, use_dev_server: bool, host: &'a str) -> ViteMode {
         if !use_hb {
             return ViteMode::Development;
         }
@@ -39,14 +39,57 @@ impl ViteMode {
 
 #[derive(Debug, PartialEq, Eq)]
 pub struct ViteConfig<'a> {
+    /// The `path/to/manifest.json` file.
+    /// Currently, Vite won't resolve relative paths, so please consider
+    /// your current working directory as the root of it and start the path
+    /// with a root node directory directly.
+    /// 
+    /// # Example
+    /// ```plaintext
+    /// your_project/
+    /// |-- public/
+    /// |   |-- dist/
+    /// |   |   |-- manifest.json
+    /// |-- src/
+    /// |   |-- main.rs // <-- you're here!
+    /// ```
+    /// 
+    /// ```rust
+    /// 
+    /// use vite_rust::ViteConfig;
+    /// let config = ViteConfig {
+    ///     manifest_path: "public/dist/manifest.json",
+    ///     // ...
+    /// };
+    /// ```
     pub manifest_path: &'a str,
-    // if entrypoints are not set, vite-rust will consider every
-    // manifest's chunk that has `isEntry: true` as an entrypoint.
+    /// Defines which entrypoints Vite will use to generate the html `script`,
+    /// `link` and `stylesheet` tags.
+    /// 
+    /// If `None` is provided, Vite will scan the manifest for files with
+    /// `isEntry: true` property and consider them the entrypoints.
     pub entrypoints: Option<Vec<&'a str>>,
-    // leave it empty for auto-discovering
+    /// If `None` is provided, Vite will discover which one to use considering:
+    /// -   any of `RUST_ENV`, `NODE_ENV` or `APP_ENV` environment variables exists
+    ///     and is set to `true`;
+    /// -   Dev-server is running;
+    /// -   Heart beat check is enabled.
+    /// 
+    /// By setting this option, the discovering phase will be skipped.
+    /// Refer to the crate's `README.md` file to understand the way it decides which mode to pick.
     pub force_mode: Option<ViteMode>,
+    /// Whether Vite should ping your vite dev-server to check if its running.
+    /// If false, `ViteMode` will be set to `Development` if not forced by the configuration.
     pub use_heart_beat_check: bool,
+    /// Whether dev server should be considered or not.
+    /// 
+    /// If false, `force_mode` should be either `Manifest` or `None`,
+    /// otherwise, undefined behavior might occur.
     pub enable_dev_server: bool,
+    /// The host in which your vite dev-server is running.
+    /// Normally, it would be `"http://localhost:5173"`.
+    /// 
+    /// Please, do not forget the protocol (http, https)!
     pub server_host: Option<&'a str>,
 }
 
