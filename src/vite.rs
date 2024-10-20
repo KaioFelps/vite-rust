@@ -38,7 +38,8 @@ impl Vite {
     ///         r#"<link rel="stylesheet" href="assets/index-BPvgi06w.css" />
     ///         <link rel="stylesheet" href="assets/main-Bx9V9zN2.css" />
     ///         <script type="module" src="assets/main-C4QS14El.js"></script>
-    ///         <link rel="modulepreload" href="assets/react-CHdo91hT.svg" />"#
+    ///         <link rel="modulepreload" href="assets/react-CHdo91hT.svg" />"#;
+    /// 
     ///     let expected = expected.replace("\t", "     ")
     ///         .lines()
     ///         .map(str::trim)

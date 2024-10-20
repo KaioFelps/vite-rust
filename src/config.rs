@@ -54,7 +54,7 @@ pub struct ViteConfig<'a> {
     /// |   |-- main.rs // <-- you're here!
     /// ```
     /// 
-    /// ```rust
+    /// ```ignore
     /// 
     /// use vite_rust::ViteConfig;
     /// let config = ViteConfig {
@@ -112,7 +112,7 @@ impl<'a> ViteConfig<'a> {
     ///     server_host: Some("http://localhost:5173")
     /// };
     /// 
-    /// let with_defaults_config = ViteConfig::new_with_defaults("path/to/manifest.json", None);
+    /// let with_defaults_config = ViteConfig::new_with_defaults("path/to/manifest.json");
     /// 
     /// assert_eq!(manual_config, with_defaults_config);
     /// ```

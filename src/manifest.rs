@@ -151,6 +151,7 @@ impl Manifest {
 #[cfg(test)]
 mod test {
     use super::Manifest;
+    use crate::test_utils::NormalizeHtmlStrings;
 
     #[test]
     fn test_generate_html_tags_1() {
@@ -160,7 +161,8 @@ mod test {
             r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
             <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
             <script type="module" src="assets/foo-BRBmoGS9.js"></script>
-            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
+            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#
+            .__normalize_html_strings();
 
         let generated = manifest.generate_html_tags(&vec!["views/foo.js".into()]);
 
@@ -171,10 +173,10 @@ mod test {
     fn test_generate_html_tags_2() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
         let expected =
-        
             r#"<link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
             <script type="module" src="assets/bar-gkvgaI9m.js"></script>
-            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
+            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#
+            .__normalize_html_strings();
 
         let generated = manifest.generate_html_tags(&vec!["views/bar.js".into()]);
 
