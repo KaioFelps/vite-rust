@@ -28,17 +28,17 @@ impl Vite {
     /// 
     /// #[tokio::main]
     /// async fn main() {
-    ///     let mut vite_config = ViteConfig::new_with_defaults("example/dist/.vite/manifest.json");
-    ///     vite_config.entrypoints = Some(vec!["src/www/main.tsx", "src/www/index.css"]);
+    ///     let mut vite_config = ViteConfig::new_with_defaults("tests/test-manifest.json");
+    ///     vite_config.entrypoints = Some(vec!["views/foo.js"]);
     ///     vite_config.force_mode = Some(vite_rust::ViteMode::Manifest);
     ///     
     ///     let vite = Vite::new(vite_config).await.unwrap();
     /// 
     ///     let expected =
-    ///         r#"<link rel="stylesheet" href="assets/index-BPvgi06w.css" />
-    ///         <link rel="stylesheet" href="assets/main-Bx9V9zN2.css" />
-    ///         <script type="module" src="assets/main-C4QS14El.js"></script>
-    ///         <link rel="modulepreload" href="assets/react-CHdo91hT.svg" />"#;
+    ///         r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
+    ///         <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+    ///         <script type="module" src="assets/foo-BRBmoGS9.js"></script>
+    ///         <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
     /// 
     ///     let expected = expected.replace("\t", "     ")
     ///         .lines()
