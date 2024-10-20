@@ -2,12 +2,13 @@ pub mod error;
 mod asset;
 mod chunk;
 mod manifest;
+mod vite;
+mod utils;
+mod config;
 
-use error::ViteError;
-use manifest::Manifest;
+const CLIENT_SCRIPT_PATH: &'static str = r#"@vite/client"#;
 
-pub fn resolve_manifest(manifest_path: &str, entries: Vec<&str>) -> Result<String, ViteError> {
-    let manifest = Manifest::new(manifest_path)?;
-    let html = manifest.generate_html_tags(entries);
-    return Ok(html);
-}
+pub use error::ViteError;
+pub use vite::Vite;
+pub use config::ViteConfig;
+pub use config::ViteMode;
