@@ -1,7 +1,12 @@
 [package]
 name = "vite-rust"
+description = "A Rust Vite back-end integration."
+repository = "https://github.com/KaioFelps/vite-rust"
+keywords = ["rust", "vite", "rust-vite", "rust-vite-plugin", "vite plugin"]
 version = "0.1.0"
 edition = "2021"
+readme = "README.md"
+authors = [ "Kaio Felipe" ]
 
 [workspace]
 members = ["example"]
