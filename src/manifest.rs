@@ -146,6 +146,14 @@ impl Manifest {
 
         return entries;
     }
+
+    pub(crate) fn get_asset_url<'a>(&'a self, asset: &'a str) -> &'a str {
+        println!("{asset}");
+        return match self.manifest.get(asset) {
+            None => "",
+            Some(chunk) => &chunk.file
+        };
+    }
 }
 
 #[cfg(test)]
