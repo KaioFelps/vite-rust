@@ -6,6 +6,9 @@ edition = "2021"
 [workspace]
 members = ["example"]
 
+[features]
+basic_directives = []
+
 [dependencies]
 regex = "1.11.0"
 serde = { version = "1.0.210", features = ["derive", "std"] }
