@@ -1,9 +1,11 @@
 use std::sync::Arc;
 
+use crate::asset::Asset;
 use crate::error::ViteError;
 use crate::manifest::Manifest;
 use crate::utils::map_to_arc_vec;
 use crate::config::{ViteConfig, ViteMode};
+use crate::CLIENT_SCRIPT_PATH;
 
 #[derive(Debug)]
 pub struct Vite {
@@ -78,28 +80,98 @@ impl Vite {
         });
     }
 
+    /// Generates assets HTML tags from `manifest.json` file.
+    /// 
+    /// # Panics
+    /// Might panic if the file doesn't exist.
     pub fn get_tags(&self) -> String {
         self.manifest.generate_html_tags(&self.entrypoints)
     }
 
+    /// Generates scripts and stylesheet link HTML tags referencing
+    /// the entrypoints directly from the Vite dev-server.
+    pub fn get_development_scripts(&self) -> String {
+        let mut tags = vec![];
+
+        for entry in self.entrypoints.iter() {
+            if entry.ends_with(".css") {
+                tags.push(Asset::StyleSheet(self.get_asset_url(entry)).to_html());
+            } else {
+                tags.push(Asset::EntryPoint(self.get_asset_url(entry)).to_html());
+            }
+        }
+
+        return tags.join("\n");
+    }
+
+    /// Generates HTML tags considering the current [`ViteMode`]:
+    /// -   If `Development` mode, calls `Vite::get_development_scripts()` and `Vite::get_hmr_script()`
+    ///     and return a concatenation of their returns;
+    /// -   If `Manifest` mode, calls `Vite::get_tags()` and return the assets HTML tags.
+    pub fn get_resolved_vite_scripts(&self) -> String {
+        match self.mode {
+            ViteMode::Development => format!("{}\n{}", self.get_development_scripts(), self.get_hmr_script()),
+            ViteMode::Manifest => self.get_tags()
+        }
+    }
+
+    /// Returns a script tag referencing the Hot Module Reload client script from the Vite dev-server.
+    /// 
+    /// If [`ViteMode`] is set to `Manifest`, only an empty string is returned.
     pub fn get_hmr_script(&self) -> String {
+        match self.mode {
+            ViteMode::Development => {
+                format!(
+                    r#"<script type="module" src="{}/{}"></script>"#,
+                    &self.dev_server_host,
+                    CLIENT_SCRIPT_PATH
+                )
+            },
+            ViteMode::Manifest => "".to_string()
+        }
+    }
+
+    /// Returns the bundled file by the given original file's path. If it is not present in the
+    /// manifest file, an empty string is returned.
+    /// 
+    /// # Arguments
+    /// - `path`    - the root-relative path to an asset file. E.g. "src/assets/react.svg".
+    pub fn get_asset_url(&self, path: &str) -> String {
+        let path = if path.starts_with("/") { &path[1..] } else { path };
+        let path = path.replace("'", "");
+
+        match &self.mode {
+            ViteMode::Development => format!("{}/{}", self.dev_server_host, path),
+            ViteMode::Manifest => self.manifest.get_asset_url(&path).to_string(),
+        }
+    }
+
+    /// Returns the [react fast refresh script] relative to the current Vite dev-server URL.
+    /// 
+    /// [react fast refresh script]: https://vite.dev/guide/backend-integration
+    pub fn get_react_script(&self) -> String {
         return format!(
-            r#"<script type="module" src="{}/@vite/client"></script>"#,
+            r#"<script type="module">
+                import RefreshRuntime from '{}/@react-refresh'
+                RefreshRuntime.injectIntoGlobalHook(window)
+                window.$RefreshReg$ = () => {{}}
+                window.$RefreshSig$ = () => (type) => type
+                window.__vite_plugin_react_preamble_installed__ = true
+            </script>"#,
             &self.dev_server_host
         );
     }
 
-    pub fn get_react_script(&self) -> String {
-        return format!(r#"<script type="module">
-            import RefreshRuntime from '{}/@react-refresh'
-            RefreshRuntime.injectIntoGlobalHook(window)
-            window.$RefreshReg$ = () => {{}}
-            window.$RefreshSig$ = () => (type) => type
-            window.__vite_plugin_react_preamble_installed__ = true
-        </script>
-        "#, &self.dev_server_host);
-    }
-
+    /// Returns the current `manifest.json` file hash. Might be used for
+    /// assets versioning.
+    /// 
+    /// The resultant string is a hex-encoded MD5 hash.
     #[inline]
     pub fn get_hash(&self) -> &str { self.manifest.get_hash() }
+
+    /// Returns the Vite instance's dev-server URL.
+    pub fn get_dev_server_url(&self) -> &str { &self.dev_server_host }
+
+    /// Returns the current Vite instance's mode.
+    pub fn mode(&self) -> &ViteMode { &self.mode }
 }
