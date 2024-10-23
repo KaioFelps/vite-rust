@@ -1,50 +1,26 @@
-# React + TypeScript + Vite
+# ✨ Rust ✨ + React + TypeScript + Vite
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This application was generated using Vite's cli. It then had the directory tree modified to fit with a cargo application (generated with cargo cli).
 
-Currently, two official plugins are available:
+This example is a playground containing an application working with `vite-rust` integration.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react/README.md) uses [Babel](https://babeljs.io/) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Running
 
-## Expanding the ESLint configuration
-
-If you are developing a production application, we recommend updating the configuration to enable type aware lint rules:
-
-- Configure the top-level `parserOptions` property like this:
-
-```js
-export default tseslint.config({
-  languageOptions: {
-    // other options...
-    parserOptions: {
-      project: ['./tsconfig.node.json', './tsconfig.app.json'],
-      tsconfigRootDir: import.meta.dirname,
-    },
-  },
-})
+You will need two processes for running a vite application with any other language but javascript. So, in one
+powershell or shell tab, run:
+```bash
+# starts Vite dev server, which will serve the assets during development
+$ npm run dev
 ```
 
-- Replace `tseslint.configs.recommended` to `tseslint.configs.recommendedTypeChecked` or `tseslint.configs.strictTypeChecked`
-- Optionally add `...tseslint.configs.stylisticTypeChecked`
-- Install [eslint-plugin-react](https://github.com/jsx-eslint/eslint-plugin-react) and update the config:
+In a second terminal, use `cargo run` to start your real application.
 
-```js
-// eslint.config.js
-import react from 'eslint-plugin-react'
+## Build
 
-export default tseslint.config({
-  // Set the react version
-  settings: { react: { version: '18.3' } },
-  plugins: {
-    // Add the react plugin
-    react,
-  },
-  rules: {
-    // other rules...
-    // Enable its recommended rules
-    ...react.configs.recommended.rules,
-    ...react.configs['jsx-runtime'].rules,
-  },
-})
-```
+By running `npm run build` (or `vite build`), it will generate a manifest used by `vite-rust` when
+on `Manifest` mode. After built, just type `cargo run` normally.
+
+Note that, if you did not set `ViteMode` to `Manifest` and your vite dev-server isn't running at all,
+an error log will be printted to your terminal and Vite will automatically swipe to `Manifest` mode,
+in which, as described at the crate's `README.md` file, uses the build-generated manifest json file
+to inject the modules in your html template.

@@ -4,6 +4,11 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-vite-rust = { path = ".." }
+vite-rust = { path = "..", features = ["basic_directives"] } 
 env_logger = "0.11.5"
 tokio = { version = "1.40.0", features = ["full"] }
+regex = "1.11.0"
+axum = { version = "0.7.7" }
+axum-macros = "0.4.2"
+tower-http = { version = "0.6.1", features = ["fs", "trace"] }
+tower = { version = "0.5.1", features = ["util"] }
