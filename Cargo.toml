@@ -7,8 +7,14 @@ keywords = ["rust", "vite", "rust-vite", "rust-vite-plugin", "vite plugin"]
 version = "0.1.0"
 edition = "2021"
 readme = "README.md"
-authors = [ "Kaio Felipe" ]
+authors = [ "Kaio Felps" ]
 license-file = "LICENSE"
+exclude = [
+    "example/*",
+    "vite-rs-plugin/*",
+    ".github/*",
+    ".vscode/*"
+]
 
 [workspace]
 members = ["example"]
