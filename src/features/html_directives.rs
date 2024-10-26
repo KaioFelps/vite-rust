@@ -30,13 +30,13 @@ impl ViteDefaultDirectives for Vite {
     /// [`ViteMode`]: crate::ViteMode
     fn vite_directive(&self, html: &mut String) {
         let regex = VITE_DIRECTIVE.get_or_init(|| {
-            Regex::new(r"([ \t]*)@vite([ \t]*\n?)$").unwrap()
+            Regex::new(r"([ \t]*)@vite([ \t]*)(\s|$)").unwrap()
         });
 
         let tags_or_scripts: String = self.get_resolved_vite_scripts();
 
         *html = regex.replace_all(html, |caps: &regex::Captures| {
-            return format!("{}{}{}", &caps[1], tags_or_scripts, &caps[2]);
+            return format!("{}{}{}{}", &caps[1], tags_or_scripts, &caps[2], &caps[3]);
         }).to_string();
     }
 
@@ -131,13 +131,14 @@ mod test {
     async fn test_vite_directive() {
         let (dev, manifest) = get_vites().await;
 
-        let dev_expected = r#"
+        // region: --- Expectations
+        let dev_expected_with_multiple_directives = r#"
         @vite::react
         <script type="module" src="http://localhost:5173/views/foo.js"></script>
         <script type="module" src="http://localhost:5173/@vite/client"></script>
         "#;
 
-        let manifest_expected = r#"
+        let manifest_expected_with_multiple_directives = r#"
         @vite::react
         <link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
         <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
@@ -145,24 +146,47 @@ mod test {
         <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
         "#;
 
-        let mut dev_directive = "@vite::react\n@vite".to_string();
+        let dev_expected = r#"
+        <script type="module" src="http://localhost:5173/views/foo.js"></script>
+        <script type="module" src="http://localhost:5173/@vite/client"></script>
+        "#;
+
+        let manifest_expected = r#"
+        <link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
+        <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+        <script type="module" src="assets/foo-BRBmoGS9.js"></script>
+        <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
+        "#;
+
+        // endregion: --- Expectations
+
+        let mut dev_with_multiple_directives = "@vite::react\n@vite".to_string();
+        let mut manifest_with_multiple_directives = dev_with_multiple_directives.clone();
+        let mut dev_directive = r#"@vite 
+             "#.to_string(); // with some weird breaklines
         let mut manifest_directive = dev_directive.clone();
         
+        dev.vite_directive(&mut dev_with_multiple_directives);
+        assert_eq!(dev_with_multiple_directives, dev_expected_with_multiple_directives.__normalize_html_strings());
+        
+        manifest.vite_directive(&mut manifest_with_multiple_directives);
+        assert_eq!(manifest_with_multiple_directives, manifest_expected_with_multiple_directives.__normalize_html_strings());
+        
         dev.vite_directive(&mut dev_directive);
-        assert_eq!(dev_directive, dev_expected.__normalize_html_strings());
+        assert_eq!(dev_directive.__normalize_html_strings(), dev_expected.__normalize_html_strings());
         
         manifest.vite_directive(&mut manifest_directive);
-        assert_eq!(manifest_directive, manifest_expected.__normalize_html_strings());
+        assert_eq!(manifest_directive.__normalize_html_strings(), manifest_expected.__normalize_html_strings());
     }
 
     #[tokio::test]
     async fn test_hmr_directive() {
         let (dev, manifest) = get_vites().await;
 
-        let dev_expected = r#"<script type="module" src="http://localhost:5173/@vite/client"></script>"#;
-        let manifest_expected = "";
+        let dev_expected = "@vite\n <script type=\"module\" src=\"http://localhost:5173/@vite/client\"></script>\n@vite";
+        let manifest_expected = "@vite\n\n@vite";
 
-        let mut dev_directive = "@vite::hmr".to_string();
+        let mut dev_directive = "@vite\n @vite::hmr\n@vite".to_string();
         let mut manifest_directive = dev_directive.clone();
         
         dev.hmr_directive(&mut dev_directive);
