@@ -2,7 +2,7 @@ use std::env;
 
 use crate::utils::check_heart_beat;
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub enum ViteMode {
     Development,
     Manifest,
@@ -37,7 +37,7 @@ impl ViteMode {
     }
 }
 
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Clone)]
 pub struct ViteConfig<'a> {
     /// The `path/to/manifest.json` file.
     /// Currently, Vite won't resolve relative paths, so please consider
