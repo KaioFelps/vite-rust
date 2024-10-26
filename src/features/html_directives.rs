@@ -30,7 +30,7 @@ impl ViteDefaultDirectives for Vite {
     /// [`ViteMode`]: crate::ViteMode
     fn vite_directive(&self, html: &mut String) {
         let regex = VITE_DIRECTIVE.get_or_init(|| {
-            Regex::new(r"([ \t]*)@vite([ \t]*)").unwrap()
+            Regex::new(r"([ \t]*)@vite([ \t]*\n?)$").unwrap()
         });
 
         let tags_or_scripts: String = self.get_resolved_vite_scripts();
@@ -132,18 +132,20 @@ mod test {
         let (dev, manifest) = get_vites().await;
 
         let dev_expected = r#"
+        @vite::react
         <script type="module" src="http://localhost:5173/views/foo.js"></script>
         <script type="module" src="http://localhost:5173/@vite/client"></script>
         "#;
 
         let manifest_expected = r#"
+        @vite::react
         <link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
         <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
         <script type="module" src="assets/foo-BRBmoGS9.js"></script>
         <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
         "#;
 
-        let mut dev_directive = "@vite".to_string();
+        let mut dev_directive = "@vite::react\n@vite".to_string();
         let mut manifest_directive = dev_directive.clone();
         
         dev.vite_directive(&mut dev_directive);
