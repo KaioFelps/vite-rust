@@ -30,7 +30,7 @@ impl ViteDefaultDirectives for Vite {
     /// [`ViteMode`]: crate::ViteMode
     fn vite_directive(&self, html: &mut String) {
         let regex = VITE_DIRECTIVE.get_or_init(|| {
-            Regex::new(r"([ \t]*)@vite([ \t]*\n)").unwrap()
+            Regex::new(r"([ \t]*)@vite([ \t]*)").unwrap()
         });
 
         let tags_or_scripts: String = self.get_resolved_vite_scripts();
@@ -97,7 +97,7 @@ impl ViteDefaultDirectives for Vite {
     /// [react fast refresh]: https://vite.dev/guide/backend-integration
     fn react_directive(&self, html: &mut String) {
         let regex = VITE_REACT_DIRECTIVE.get_or_init(|| {
-            Regex::new(r"([ \t]*)@vite::react([ \t]*\n)").unwrap()
+            Regex::new(r"([ \t]*)@vite::react([ \t]*)").unwrap()
         });
 
         *html = regex.replace_all(html, |caps: &regex::Captures| {
