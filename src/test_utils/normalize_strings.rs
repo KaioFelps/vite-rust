@@ -11,5 +11,7 @@ impl<T: ToString> NormalizeHtmlStrings for T {
         .map(str::trim)
         .collect::<Vec::<&str>>()
         .join("\n")
+        .trim()
+        .to_string()
     }
 }
