@@ -79,8 +79,8 @@ let my_html = r#"
 </html>
 "#;
 
-state.vite.vite_directive(&mut template);
-state.vite.react_directive(&mut template);
+vite.vite_directive(&mut template);
+vite.react_directive(&mut template);
 ```
 
 ## Little helper for manifest path
