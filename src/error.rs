@@ -1,20 +1,27 @@
-use std::{error::Error, fmt};
 use serde::Deserialize;
+use std::{error::Error, fmt};
 
 #[derive(Debug, Deserialize)]
 pub enum ViteErrorKind {
-    Manifest
+    Manifest,
 }
 
 #[derive(Debug, Deserialize)]
+#[allow(unused)]
 pub struct ViteError {
-    cause: String,
-    kind: ViteErrorKind
+    cause: Box<str>,
+    kind: ViteErrorKind,
 }
 
 impl ViteError {
-    pub fn new(cause: String, kind: ViteErrorKind) -> Self {
-        ViteError { cause, kind }
+    pub fn new<T>(cause: T, kind: ViteErrorKind) -> Self
+    where
+        T: ToString,
+    {
+        ViteError {
+            cause: cause.to_string().into_boxed_str(),
+            kind,
+        }
     }
 }
 

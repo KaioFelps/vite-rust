@@ -1,6 +1,9 @@
 #![allow(unused)]
+use crate::{
+    asset::Asset,
+    manifest::{self, Manifest},
+};
 use serde::Deserialize;
-use crate::{asset::Asset, manifest::{self, Manifest}};
 
 // All strings are Strings instead of &'lf str
 // because serde can't borrow data from the Deserializer
@@ -65,12 +68,12 @@ pub(crate) struct Chunk {
 enum ChunkIterListTrack {
     Assets,
     Css,
-    EOT, // end-of-tracking
+    Eot, // end-of-tracking
 }
 
 impl ChunkIterListTrack {
     pub fn start() -> Self {
-        return Self::Assets;
+        Self::Assets
     }
 }
 
@@ -85,14 +88,14 @@ struct ChunkIter<'a> {
 impl Chunk {
     /// Returns an [`Iterator<Item = Asset>`], where the returned assets
     /// are the Chunk's `assets`, `imports` and `css` fields, respectively.
-    pub fn assets_iter<'a>(&'a self) -> impl Iterator<Item = Asset> + 'a {
-        return ChunkIter {
+    pub fn assets_iter(&self) -> impl Iterator<Item = Asset> + '_ {
+        ChunkIter {
             assets: &self.assets,
             imports: &self.imports,
             css: &self.css,
             index: 0,
             track: ChunkIterListTrack::start(),
-        };
+        }
     }
 }
 
@@ -103,7 +106,7 @@ impl<'a> Iterator for ChunkIter<'a> {
         if self.track == ChunkIterListTrack::Assets {
             if let Some(asset) = self.assets.get(self.index) {
                 self.index += 1;
-                return Some(Asset::Preload(asset.clone()))
+                return Some(Asset::Preload(asset.clone()));
             } else {
                 self.track = ChunkIterListTrack::Css;
                 self.index = 0;
@@ -113,13 +116,13 @@ impl<'a> Iterator for ChunkIter<'a> {
         if self.track == ChunkIterListTrack::Css {
             if let Some(css) = self.css.get(self.index) {
                 self.index += 1;
-                return Some(Asset::StyleSheet(css.clone()))
+                return Some(Asset::StyleSheet(css.clone()));
             } else {
-                self.track = ChunkIterListTrack::EOT;
+                self.track = ChunkIterListTrack::Eot;
                 self.index = 0;
             }
         }
 
-        return None;
+        None
     }
 }
