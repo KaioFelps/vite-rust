@@ -104,6 +104,13 @@ pub struct ViteConfig<'a> {
 }
 
 impl<'a> ViteConfig<'a> {
+    /// Creates a new `ViteConfig` instance with `manifest_path` and `entrypoints` fields set.
+    pub fn new(manifest_path: &'a str, entrypoints: Vec<&'a str>) -> Self {
+        ViteConfig::default()
+            .set_manifest_path(manifest_path)
+            .set_entrypoints(entrypoints)
+    }
+
     pub fn set_manifest_path(mut self, manifest_path: &'a str) -> Self {
         self.manifest_path = Some(manifest_path);
         self
