@@ -70,7 +70,7 @@ mod test {
         let tries_count = Arc::new(Mutex::new(0));
         let tries_clone = Arc::clone(&tries_count);
 
-        let result = retry_cb(5, move || {
+        let success_on_last_retry = retry_cb(2, move || {
             let tries_count = tries_clone.clone();
             Box::pin(async move {
                 let count = *tries_count.lock().unwrap();
@@ -84,6 +84,23 @@ mod test {
         })
         .await;
 
-        assert!(result.is_ok());
+        let tries_count = Arc::new(Mutex::new(0));
+        let tries_clone = Arc::clone(&tries_count);
+        let total_failure = retry_cb(2, move || {
+            let tries_count = tries_clone.clone();
+            Box::pin(async move {
+                let count = *tries_count.lock().unwrap();
+                if count >= 0 {
+                    *tries_count.lock().unwrap() = count + 1;
+                    return Err(());
+                }
+
+                Ok(())
+            })
+        })
+        .await;
+
+        assert!(success_on_last_retry.is_ok());
+        assert!(total_failure.is_err());
     }
 }
