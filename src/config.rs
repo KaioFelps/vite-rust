@@ -9,7 +9,7 @@ pub enum ViteMode {
 }
 
 impl ViteMode {
-    pub(crate) async fn discover<'a>(use_hb: bool, use_dev_server: bool, host: &'a str) -> ViteMode {
+    pub(crate) async fn discover(use_hb: bool, use_dev_server: bool, host: &str) -> ViteMode {
         if !use_hb {
             return ViteMode::Development;
         }
@@ -17,17 +17,19 @@ impl ViteMode {
         if !use_dev_server {
             return ViteMode::Manifest;
         }
-        
+
         let is_production = env::vars().any(|(k, v)| {
             if ["RUST_ENV", "NODE_ENV", "APP_ENV"].contains(&k.as_str()) {
                 return v.parse::<bool>().unwrap_or(false);
             }
 
-            return false;
+            false
         });
 
-        if is_production { return ViteMode::Manifest; }
-        
+        if is_production {
+            return ViteMode::Manifest;
+        }
+
         let dev_server_is_ok = check_heart_beat(host, None).await;
 
         match dev_server_is_ok {
@@ -43,12 +45,12 @@ pub struct ViteConfig<'a> {
     /// Currently, Vite won't resolve relative paths, so please consider
     /// your current working directory as the root of it and start the path
     /// with a root node directory directly.
-    /// 
+    ///
     /// **Optionally and experimentally**, you can use the [`resolve_path`]
     /// method for the manifest file resolution. However, this method might
     /// come to fail at some point, and will also panic in the many situations
     /// described on its documentation.
-    /// 
+    ///
     /// # Example
     /// ```plaintext
     /// your_project/
@@ -58,22 +60,22 @@ pub struct ViteConfig<'a> {
     /// |-- src/
     /// |   |-- main.rs // <-- you're here!
     /// ```
-    /// 
+    ///
     /// ```ignore
-    /// 
+    ///
     /// use vite_rust::{ViteConfig, utils::resolve_path};
-    /// 
+    ///
     /// let config = ViteConfig {
-    ///     manifest_path: "public/dist/manifest.json",
+    ///     manifest_path: Some("public/dist/manifest.json"),
     ///     // or
-    ///     manifest_path: resolve_path(file!(), "../public/dist/manifest.json"),
+    ///     manifest_path: Some(resolve_path(file!(), "../public/dist/manifest.json")),
     ///     // ...
     /// };
     /// ```
-    pub manifest_path: &'a str,
+    pub manifest_path: Option<&'a str>,
     /// Defines which entrypoints Vite will use to generate the html `script`,
     /// `link` and `stylesheet` tags.
-    /// 
+    ///
     /// If `None` is provided, Vite will scan the manifest for files with
     /// `isEntry: true` property and consider them the entrypoints.
     pub entrypoints: Option<Vec<&'a str>>,
@@ -82,7 +84,7 @@ pub struct ViteConfig<'a> {
     ///     and is set to `true`;
     /// -   Dev-server is running;
     /// -   Heart beat check is enabled.
-    /// 
+    ///
     /// By setting this option, the discovering phase will be skipped.
     /// Refer to the crate's `README.md` file to understand the way it decides which mode to pick.
     pub force_mode: Option<ViteMode>,
@@ -90,45 +92,73 @@ pub struct ViteConfig<'a> {
     /// If false, `ViteMode` will be set to `Development` if not forced by the configuration.
     pub use_heart_beat_check: bool,
     /// Whether dev server should be considered or not.
-    /// 
+    ///
     /// If false, `force_mode` should be either `Manifest` or `None`,
     /// otherwise, undefined behavior might occur.
     pub enable_dev_server: bool,
     /// The host in which your vite dev-server is running.
     /// Normally, it would be `"http://localhost:5173"`.
-    /// 
+    ///
     /// Please, do not forget the protocol (http, https)!
     pub server_host: Option<&'a str>,
 }
 
 impl<'a> ViteConfig<'a> {
+    pub fn set_manifest_path(mut self, manifest_path: &'a str) -> Self {
+        self.manifest_path = Some(manifest_path);
+        self
+    }
+    pub fn set_entrypoints(mut self, entrypoints: Vec<&'a str>) -> Self {
+        self.entrypoints = Some(entrypoints);
+        self
+    }
+    pub fn set_force_mode(mut self, mode: ViteMode) -> Self {
+        self.force_mode = Some(mode);
+        self
+    }
+    pub fn set_server_host(mut self, server_host: &'a str) -> Self {
+        self.server_host = Some(server_host);
+        self
+    }
+    pub fn without_heart_beat_check(mut self) -> Self {
+        self.use_heart_beat_check = false;
+        self
+    }
+    pub fn without_dev_server(mut self) -> Self {
+        self.enable_dev_server = false;
+        self
+    }
+}
+
+impl Default for ViteConfig<'_> {
     /// Create a `ViteConfig` instance.
-    /// 
+    ///
     /// You can create your config by directly instantiating the struct, or
-    /// by using some default options and defining only the most critical fields:
-    /// 
+    /// by using some default options. Note that you **must set the manifest
+    /// path**.
+    ///
     /// # Example
     /// ```rust
     /// use vite_rust::ViteConfig;
-    /// 
+    ///
     /// let manual_config = ViteConfig {
-    ///     manifest_path: "path/to/manifest.json",
+    ///     manifest_path: Some("path/to/manifest.json"),
     ///     entrypoints: None, // Vite can discover them by itself
     ///     force_mode: None, // Vite can discover it too
     ///     use_heart_beat_check: true,
     ///     enable_dev_server: true,
     ///     server_host: Some("http://localhost:5173")
     /// };
-    /// 
-    /// let with_defaults_config = ViteConfig::new_with_defaults("path/to/manifest.json");
-    /// 
+    ///
+    /// let with_defaults_config = ViteConfig::default().set_manifest_path("path/to/manifest.json");
+    ///
     /// assert_eq!(manual_config, with_defaults_config);
     /// ```
-    pub fn new_with_defaults(manifest_path: &'a str) -> Self {
-        ViteConfig {
+    fn default() -> Self {
+        Self {
             enable_dev_server: true,
             entrypoints: None,
-            manifest_path,
+            manifest_path: None,
             force_mode: None,
             server_host: Some("http://localhost:5173"),
             use_heart_beat_check: true,
