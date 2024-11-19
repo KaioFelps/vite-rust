@@ -1,18 +1,18 @@
-use std::fs::File;
-use std::collections::{HashMap, HashSet};
-use std::io::Read;
 use md5::{Digest, Md5};
 use serde::Deserialize;
-
+use std::collections::{HashMap, HashSet};
+use std::fs::File;
+use std::io::Read;
 
 use crate::asset::Asset;
 use crate::chunk::Chunk;
 use crate::error::{ViteError, ViteErrorKind};
+use crate::vite::Entrypoints;
 
 #[derive(Deserialize, Debug)]
 pub(crate) struct Manifest {
     manifest: HashMap<String, Chunk>,
-    hash: String
+    hash: String,
 }
 
 impl Manifest {
@@ -21,47 +21,44 @@ impl Manifest {
             Err(err) => {
                 return Err(ViteError::new(
                     format!("Failed to open manifest at {}: {}", path, err),
-                    ViteErrorKind::Manifest
+                    ViteErrorKind::Manifest,
                 ));
-            },
+            }
             Ok(file) => file,
         };
 
-        let mut manifest_content= String::new();
+        let mut manifest_content = String::new();
         if let Err(err) = file.read_to_string(&mut manifest_content) {
             return Err(ViteError::new(
                 format!("Failed to read manifest.json content: {}", err),
-                ViteErrorKind::Manifest
+                ViteErrorKind::Manifest,
             ));
         };
-        
+
         let hash = match Manifest::get_hash_from_manifest(&manifest_content) {
             Ok(hash) => hash,
             Err(err) => {
                 return Err(ViteError::new(
                     format!("Failed to generate hash for manifest: {err}"),
-                    ViteErrorKind::Manifest
+                    ViteErrorKind::Manifest,
                 ))
             }
         };
 
         let manifest = serde_json::from_str(&manifest_content);
 
-        return match manifest {
+        match manifest {
             Err(err) => Err(ViteError::new(
                 format!("Failed to parse manifest json: {}", err),
-                ViteErrorKind::Manifest
+                ViteErrorKind::Manifest,
             )),
-            Ok(manifest) => Ok(Manifest {
-                manifest,
-                hash,
-            })
-        };
+            Ok(manifest) => Ok(Manifest { manifest, hash }),
+        }
     }
 
-    fn get_hash_from_manifest(content: &str) -> Result<String, std::io::Error> {        
+    fn get_hash_from_manifest(content: &str) -> Result<String, std::io::Error> {
         let mut hasher = Md5::new();
-        hasher.update(&content.as_bytes());
+        hasher.update(content.as_bytes());
         let hash = hasher.finalize();
 
         let mut buffer = Vec::new();
@@ -78,7 +75,7 @@ impl Manifest {
         &self.hash
     }
 
-    pub fn generate_html_tags(&self, entrypoints: &Vec<String>) -> String {
+    pub fn generate_html_tags(&self, entrypoints: &Entrypoints) -> String {
         if self.manifest.is_empty() {
             log::error!("Manifest is empty. Empty string being returned from `Manifest::generate_html_tags`.");
             return "".into();
@@ -87,11 +84,11 @@ impl Manifest {
         let mut discovered_assets = HashSet::<Asset>::new();
 
         for entry in entrypoints {
-            let entry_chunk = match self.manifest.get(entry) {
+            let entry_chunk = match self.manifest.get(entry.as_ref()) {
                 None => {
                     log::error!(r#"Skipping invalid or unexisting entry "{entry}"."#);
                     continue;
-                },
+                }
                 Some(chunk) => chunk,
             };
 
@@ -111,11 +108,11 @@ impl Manifest {
         // Puts the assets in the following order: stylesheets > entries > preloads
         assets.sort();
 
-        return assets
+        assets
             .into_iter()
-            .map(|asset| asset.to_html())
+            .map(|asset| asset.into_html())
             .collect::<Vec<String>>()
-            .join("\n");
+            .join("\n")
     }
 
     fn iterate_over_chunk_assets(&self, set: &mut HashSet<Asset>, chunk: &Chunk) {
@@ -135,7 +132,7 @@ impl Manifest {
     }
 
     /// Generates a list of keys of every chunk that `isEntry`.
-    pub(crate) fn get_manifest_entries<'a>(&'a self) -> Vec<&'a str> {
+    pub(crate) fn get_manifest_entries(&self) -> Vec<&str> {
         let mut entries = Vec::new();
 
         for (key, chunk) in self.manifest.iter() {
@@ -144,14 +141,14 @@ impl Manifest {
             }
         }
 
-        return entries;
+        entries
     }
 
     pub(crate) fn get_asset_url<'a>(&'a self, asset: &'a str) -> &'a str {
         println!("{asset}");
         return match self.manifest.get(asset) {
             None => "",
-            Some(chunk) => &chunk.file
+            Some(chunk) => &chunk.file,
         };
     }
 }
@@ -164,9 +161,7 @@ mod test {
     #[test]
     fn test_generate_html_tags_1() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let expected =
-        
-            r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
+        let expected = r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
             <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
             <script type="module" src="assets/foo-BRBmoGS9.js"></script>
             <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#
@@ -180,8 +175,7 @@ mod test {
     #[test]
     fn test_generate_html_tags_2() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let expected =
-            r#"<link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
+        let expected = r#"<link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
             <script type="module" src="assets/bar-gkvgaI9m.js"></script>
             <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#
             .__normalize_html_strings();
