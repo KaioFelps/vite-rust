@@ -69,6 +69,7 @@ impl Vite {
                     config.use_heart_beat_check,
                     config.enable_dev_server,
                     dev_host,
+                    config.heart_beat_retries_limit.unwrap(),
                 )
                 .await
             }

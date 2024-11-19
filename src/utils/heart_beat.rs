@@ -2,7 +2,7 @@ use std::{future::Future, pin::Pin, time::Duration};
 
 use crate::CLIENT_SCRIPT_PATH;
 
-pub(crate) async fn check_heart_beat(host: &str, timeout: Option<Duration>) -> bool {
+pub(crate) async fn check_heart_beat(host: &str, timeout: Option<Duration>, retries: u8) -> bool {
     let timeout = match timeout {
         Some(t) => t,
         None => Duration::from_secs(10),
@@ -22,7 +22,7 @@ pub(crate) async fn check_heart_beat(host: &str, timeout: Option<Duration>) -> b
         }
     };
 
-    let response = retry_cb(5, move || {
+    let response = retry_cb(retries, move || {
         let ping_endpoint = ping_endpoint.clone().to_string();
         Box::pin(async move {
             reqwest::Client::new()
@@ -47,7 +47,7 @@ pub(crate) async fn check_heart_beat(host: &str, timeout: Option<Duration>) -> b
 }
 
 async fn retry_cb<T, E>(
-    mut retries_count: i32,
+    mut retries_count: u8,
     cb: impl Send + Sync + 'static + Fn() -> Pin<Box<dyn Future<Output = Result<T, E>>>> + 'static,
 ) -> Result<T, E> {
     let mut response = cb().await;

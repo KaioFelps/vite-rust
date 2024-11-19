@@ -9,7 +9,12 @@ pub enum ViteMode {
 }
 
 impl ViteMode {
-    pub(crate) async fn discover(use_hb: bool, use_dev_server: bool, host: &str) -> ViteMode {
+    pub(crate) async fn discover(
+        use_hb: bool,
+        use_dev_server: bool,
+        host: &str,
+        hb_retries: u8,
+    ) -> ViteMode {
         if !use_hb {
             return ViteMode::Development;
         }
@@ -30,7 +35,7 @@ impl ViteMode {
             return ViteMode::Manifest;
         }
 
-        let dev_server_is_ok = check_heart_beat(host, None).await;
+        let dev_server_is_ok = check_heart_beat(host, None, hb_retries).await;
 
         match dev_server_is_ok {
             true => ViteMode::Development,
@@ -91,6 +96,8 @@ pub struct ViteConfig<'a> {
     /// Whether Vite should ping your vite dev-server to check if its running.
     /// If false, `ViteMode` will be set to `Development` if not forced by the configuration.
     pub use_heart_beat_check: bool,
+    /// How many times heartbeat checker should try before fallbacking.
+    pub heart_beat_retries_limit: Option<u8>,
     /// Whether dev server should be considered or not.
     ///
     /// If false, `force_mode` should be either `Manifest` or `None`,
@@ -115,10 +122,12 @@ impl<'a> ViteConfig<'a> {
         self.manifest_path = Some(manifest_path);
         self
     }
+
     pub fn set_entrypoints(mut self, entrypoints: Vec<&'a str>) -> Self {
         self.entrypoints = Some(entrypoints);
         self
     }
+
     pub fn set_force_mode(mut self, mode: ViteMode) -> Self {
         self.force_mode = Some(mode);
         self
@@ -127,10 +136,17 @@ impl<'a> ViteConfig<'a> {
         self.server_host = Some(server_host);
         self
     }
+
+    pub fn set_heart_beat_retries_limit(mut self, limit: u8) -> Self {
+        self.heart_beat_retries_limit = Some(limit);
+        self
+    }
+
     pub fn without_heart_beat_check(mut self) -> Self {
         self.use_heart_beat_check = false;
         self
     }
+
     pub fn without_dev_server(mut self) -> Self {
         self.enable_dev_server = false;
         self
@@ -154,7 +170,8 @@ impl Default for ViteConfig<'_> {
     ///     force_mode: None, // Vite can discover it too
     ///     use_heart_beat_check: true,
     ///     enable_dev_server: true,
-    ///     server_host: Some("http://localhost:5173")
+    ///     server_host: Some("http://localhost:5173"),
+    ///     heart_beat_retries_limit: Some(5),
     /// };
     ///
     /// let with_defaults_config = ViteConfig::default().set_manifest_path("path/to/manifest.json");
@@ -169,6 +186,7 @@ impl Default for ViteConfig<'_> {
             force_mode: None,
             server_host: Some("http://localhost:5173"),
             use_heart_beat_check: true,
+            heart_beat_retries_limit: Some(5),
         }
     }
 }
