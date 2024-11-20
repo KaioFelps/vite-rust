@@ -75,15 +75,16 @@ impl Vite {
             }
         };
 
-        let manifest = match mode {
-            ViteMode::Manifest => {
-                if let Some(manifest_path) = config.manifest_path {
-                    Some(Manifest::new(manifest_path)?)
-                } else {
-                    panic!("Tried to start Vite in Manifest mode, but no manifest.json file has been set.");
-                }
+        let manifest = if mode.eq(&ViteMode::Manifest) || config.entrypoints.is_none() {
+            if let Some(manifest_path) = config.manifest_path {
+                Some(Manifest::new(manifest_path)?)
+            } else {
+                panic!(
+                    "Tried to start Vite in Manifest mode, but no manifest.json file has been set."
+                );
             }
-            ViteMode::Development => None,
+        } else {
+            None
         };
 
         let entrypoints: Entrypoints = match config.entrypoints {
