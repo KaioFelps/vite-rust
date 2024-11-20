@@ -23,15 +23,7 @@ impl ViteMode {
             return ViteMode::Manifest;
         }
 
-        let is_production = env::vars().any(|(k, v)| {
-            if ["RUST_ENV", "NODE_ENV", "APP_ENV"].contains(&k.as_str()) {
-                return v.parse::<bool>().unwrap_or(false);
-            }
-
-            false
-        });
-
-        if is_production {
+        if is_production() {
             return ViteMode::Manifest;
         }
 
@@ -42,6 +34,16 @@ impl ViteMode {
             false => ViteMode::Manifest,
         }
     }
+}
+
+fn is_production() -> bool {
+    env::vars().any(|(k, v)| {
+        if ["RUST_ENV", "NODE_ENV", "APP_ENV", "__TEST_APP_ENV"].contains(&k.as_str()) {
+            return v == "production";
+        }
+
+        false
+    })
 }
 
 #[derive(Debug, PartialEq, Eq, Clone)]
@@ -188,5 +190,37 @@ impl Default for ViteConfig<'_> {
             use_heart_beat_check: true,
             heart_beat_retries_limit: Some(5),
         }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use std::env;
+
+    use crate::{config::is_production, ViteMode};
+
+    #[tokio::test]
+    async fn test_discover() {
+        let host = "http://localhost:3000";
+        let hb_retries = 1;
+
+        assert_eq!(
+            ViteMode::Development,
+            ViteMode::discover(false, true, host, hb_retries).await
+        );
+
+        assert_eq!(
+            ViteMode::Manifest,
+            ViteMode::discover(true, false, host, hb_retries).await
+        );
+    }
+
+    #[test]
+    fn test_is_production() {
+        env::set_var("__TEST_APP_ENV", "production");
+        assert!(is_production());
+
+        env::remove_var("__TEST_APP_ENV");
+        assert!(!is_production());
     }
 }
