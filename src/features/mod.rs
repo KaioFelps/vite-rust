@@ -1,2 +1,2 @@
-#[cfg(feature = "basic_directives")]
+#[cfg(feature = "basic-directives")]
 pub mod html_directives;

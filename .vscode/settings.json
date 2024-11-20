@@ -1,5 +1,5 @@
 {
     "rust-analyzer.cargo.features": [
-        "basic_directives",
+        "basic-directives",
     ],
 }

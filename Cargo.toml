@@ -20,7 +20,7 @@ exclude = [
 members = ["example"]
 
 [features]
-basic_directives = []
+basic-directives = []
 
 [dependencies]
 regex = "1.11.0"
