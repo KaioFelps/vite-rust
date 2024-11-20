@@ -20,11 +20,19 @@ To initialize it, you need to provide a `ViteConfig` struct that contains data t
 be used to manage the manifest and also generate the HTML tags according to the **mode** you
 are running at.
 
-```rust
-let mut vite_config: vite_rust::ViteConfig = vite_rust::ViteConfig::new_with_defaults("path/to/manifest.json");
-vite_config.entrypoints = Some(vec!["src/main.tsx", "src/index.css"]);
+There are two fields that are exclusively mandatory:
+- `manifest_path`;
+- `entrypoints`.
 
-let vite = vite_rust::Vite::new(vite_config).await.unwrap();
+If none of them is set, your application will certainly panic on Vite initialization.
+
+```rust
+use vite_rust::ViteConfig;
+let vite_config: vite_rust::ViteConfig = vite_rust::ViteConfig::default()
+    .set_manifest_path("path/to/manifest.json")
+    .set_entrypoints(vec!["views/bar.js", "views/foo.js"]);
+
+let vite = vite_rust::Vite::new(vite_config.clone()).await.unwrap();
 
 let tags = vite.get_tags(); // get html tags from Manifest and given entrypoints
 let hmr_script = vite.get_hmr_script(); // get hmr script if Mode is set to Develpment. Empty string otherwise
@@ -48,12 +56,12 @@ your Rust application running.
 
 ## Integrations and directives
 At this point, vite-rust only provides a really basic HTML directives set. You can
-use them by enabling the `basic_directives` feature at features property inside your
+use them by enabling the `basic-directives` feature at features property inside your
 Cargo file:
 
 ```toml
 [dependencies]
-vite-rust = { version = "0.1.x", features = ["basic_directives"] } 
+vite-rust = { version = "0.2.x", features = ["basic-directives"] } 
 ```
 
 However, `Vite` struct also provide many helper methods that might be useful if you want to
@@ -65,7 +73,7 @@ plain text directives using Regex:
 ```rust
 use vite_rust::{ Vite, ViteConfig, features::html_directives::ViteDefaultDirectives };
 
-let vite = Vite::new(ViteConfig::new_with_defaults("path/to/manifest.json"));
+let vite = Vite::new(ViteConfig::default().set_manifest_path("path/to/manifest.json"));
 
 let my_html = r#"
 <htmL>
@@ -90,9 +98,9 @@ It is experimental and bugs might be found, though:
 ```rust
 use vite_rust::{utils::resolve_path, ViteConfig};
 
-// if path is invalid, or file do not exist, the function will panic
+// if path is invalid, or file do not exist, the function will immediatly panic
 let manifest_path: String = resolve_path(file!(), "../dist/.vite/manifest.json");
-let vite_config: ViteConfig = ViteConfig::new_with_defaults(&manifest_path);
+let vite_config: ViteConfig = ViteConfig::default().set_manifest_path(&manifest_path);
 ```
 
 ## What on earth is a mode?
@@ -143,11 +151,7 @@ Also I want to credit some amazing projects that served as references:
 
 > [!WARNING]
 > Unexpected bugs might occur, and vite-rust is barely newborn. Please
-> be careful and let us know about any bug found.
-
-> [!NOTE]
-> While not reached version 1.x, commits will be pushed directly to the
-> main branch.
+> be careful and let me know about any bug found.
 
 ## License
 This project is licensed under the [MIT](./LICENSE) license.
