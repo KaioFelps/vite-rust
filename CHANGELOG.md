@@ -3,6 +3,10 @@ Important changes will be mentioned in this file. The project adopts
 [SemVer (Semantic Versioning 2.0.0)](https://semver.org/), as suggested
 by Cargo for its crates.
 
+## v0.2.1
+- Fix `ViteMode::discover()` heuristic when using `RUST_ENV`, `APP_ENV` and `NODE_ENV`;
+- Manifest initializes even with `Development` mode if `entrypoints` aren't set. 
+
 ## v0.2.0
 - Introduce fluent syntax to the `ViteConfig` struct initialization;
 - Replaces `ViteConfig::new_with_defaults` by `ViteConfig::default` (`Default` trait implementation);
