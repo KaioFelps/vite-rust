@@ -9,8 +9,9 @@ scripts into HTML templates.
 
 ## Getting started
 To get started, add the following under your Cargo `dependencies` field: 
+
 ```toml
-vite-rust = { version = "0.1.x" } 
+vite-rust = { version = "0.2" } 
 ```
 
 rust-vite provides a `Vite` struct that is responsible for dealing with the manifest and
@@ -61,7 +62,7 @@ Cargo file:
 
 ```toml
 [dependencies]
-vite-rust = { version = "0.2.x", features = ["basic-directives"] } 
+vite-rust = { version = "0.2", features = ["basic-directives"] } 
 ```
 
 However, `Vite` struct also provide many helper methods that might be useful if you want to
