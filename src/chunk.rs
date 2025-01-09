@@ -83,30 +83,32 @@ struct ChunkIter<'a> {
     index: usize,
     css: &'a [String],
     track: ChunkIterListTrack,
+    prefix: Option<&'a str>,
 }
 
 impl Chunk {
     /// Returns an [`Iterator<Item = Asset>`], where the returned assets
     /// are the Chunk's `assets`, `imports` and `css` fields, respectively.
-    pub fn assets_iter(&self) -> impl Iterator<Item = Asset> + '_ {
+    pub fn assets_iter(&self, prefix: Option<&'static str>) -> impl Iterator<Item = Asset> + '_ {
         ChunkIter {
             assets: &self.assets,
             imports: &self.imports,
             css: &self.css,
             index: 0,
             track: ChunkIterListTrack::start(),
+            prefix,
         }
     }
 }
 
-impl<'a> Iterator for ChunkIter<'a> {
+impl Iterator for ChunkIter<'_> {
     type Item = Asset;
 
     fn next(&mut self) -> Option<Self::Item> {
         if self.track == ChunkIterListTrack::Assets {
             if let Some(asset) = self.assets.get(self.index) {
                 self.index += 1;
-                return Some(Asset::Preload(asset.clone()));
+                return Some(Asset::pre_load(asset.clone(), self.prefix));
             } else {
                 self.track = ChunkIterListTrack::Css;
                 self.index = 0;
@@ -116,7 +118,7 @@ impl<'a> Iterator for ChunkIter<'a> {
         if self.track == ChunkIterListTrack::Css {
             if let Some(css) = self.css.get(self.index) {
                 self.index += 1;
-                return Some(Asset::StyleSheet(css.clone()));
+                return Some(Asset::style_sheet(css.clone(), self.prefix));
             } else {
                 self.track = ChunkIterListTrack::Eot;
                 self.index = 0;
