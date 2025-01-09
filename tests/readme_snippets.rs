@@ -53,7 +53,7 @@ mod test {
 
         vite.react_directive(&mut template);
         if let Err(err) = vite.vite_directive(&mut template) {
-            eprintln!("Failed to resolve vite directive: {}", err);
+            log::error!("Failed to resolve vite directive: {}", err);
         };
 
         assert_eq!(

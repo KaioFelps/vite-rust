@@ -36,10 +36,7 @@ pub(crate) async fn check_heart_beat(host: &str, timeout: Option<Duration>, retr
 
     match response {
         Err(err) => {
-            log::error!(
-                "Failed to make HTTP request to heartbeat-check endpoint: {}",
-                err
-            );
+            log::warn!("Vite development server handshake has failed: {}.", err);
             false
         }
         Ok(response) => response.status() == 200,
