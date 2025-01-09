@@ -3,6 +3,10 @@ Important changes will be mentioned in this file. The project adopts
 [SemVer (Semantic Versioning 2.0.0)](https://semver.org/), as suggested
 by Cargo for its crates.
 
+## v0.2.2
+- `ViteMode::discover()` now also looks for `RUST_ENV`, `LOCO_ENV` and `RAILS_ENV` environment variables;
+- add `set_prefix` method to force a prefix to assets paths.
+
 ## v0.2.1
 - Fix `ViteMode::discover()` heuristic when using `RUST_ENV`, `APP_ENV` and `NODE_ENV`;
 - Manifest initializes even with `Development` mode if `entrypoints` aren't set. 
