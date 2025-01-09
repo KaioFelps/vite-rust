@@ -38,7 +38,16 @@ impl ViteMode {
 
 fn is_production() -> bool {
     env::vars().any(|(k, v)| {
-        if ["RUST_ENV", "NODE_ENV", "APP_ENV", "__TEST_APP_ENV"].contains(&k.as_str()) {
+        if [
+            "RUST_ENV",
+            "NODE_ENV",
+            "APP_ENV",
+            "__TEST_APP_ENV",
+            "LOCO_ENV",
+            "RAILS_ENV",
+        ]
+        .contains(&k.as_str())
+        {
             return v == "production";
         }
 
@@ -110,6 +119,8 @@ pub struct ViteConfig<'a> {
     ///
     /// Please, do not forget the protocol (http, https)!
     pub server_host: Option<&'a str>,
+    /// Prefix assets path with the given `str`.
+    pub prefix: Option<&'a str>,
 }
 
 impl<'a> ViteConfig<'a> {
@@ -153,6 +164,11 @@ impl<'a> ViteConfig<'a> {
         self.enable_dev_server = false;
         self
     }
+
+    pub fn set_prefix(mut self, prefix: &'a str) -> Self {
+        self.prefix = Some(prefix);
+        self
+    }
 }
 
 impl Default for ViteConfig<'_> {
@@ -174,6 +190,7 @@ impl Default for ViteConfig<'_> {
     ///     enable_dev_server: true,
     ///     server_host: Some("http://localhost:5173"),
     ///     heart_beat_retries_limit: Some(5),
+    ///     prefix: None
     /// };
     ///
     /// let with_defaults_config = ViteConfig::default().set_manifest_path("path/to/manifest.json");
@@ -189,6 +206,7 @@ impl Default for ViteConfig<'_> {
             server_host: Some("http://localhost:5173"),
             use_heart_beat_check: true,
             heart_beat_retries_limit: Some(5),
+            prefix: None,
         }
     }
 }
