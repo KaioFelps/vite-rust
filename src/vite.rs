@@ -12,6 +12,7 @@ pub struct Vite {
     pub(crate) entrypoints: Entrypoints,
     pub(crate) mode: ViteMode,
     pub(crate) dev_server_host: &'static str,
+    pub(crate) prefix: Option<&'static str>,
 }
 
 impl Vite {
@@ -101,11 +102,14 @@ impl Vite {
             },
         };
 
+        let prefix = resolve_prefix(config.prefix);
+
         Ok(Vite {
             entrypoints,
             manifest,
             mode,
             dev_server_host: dev_host,
+            prefix,
         })
     }
 
@@ -118,7 +122,7 @@ impl Vite {
     /// Might panic if the target file doesn't exist.
     pub fn get_tags(&self) -> Result<String, ViteError> {
         match &self.manifest {
-            Some(manifest) => Ok(manifest.generate_html_tags(&self.entrypoints)),
+            Some(manifest) => Ok(manifest.generate_html_tags(&self.entrypoints, self.prefix)),
             None => Err(ViteError::new(
                 "Tried to get html tags from manifest, but there is no manifest file.",
                 ViteErrorKind::Manifest,
@@ -186,7 +190,7 @@ impl Vite {
         match &self.mode {
             ViteMode::Development => Ok(format!("{}/{}", self.dev_server_host, path)),
             ViteMode::Manifest => match &self.manifest {
-                Some(manifest) => Ok(manifest.get_asset_url(&path).to_string()),
+                Some(manifest) => Ok(manifest.get_asset_url(&path, self.prefix)),
                 None => Err(ViteError::new(
                     "Tried to get asset's URL from manifest, but there is no manifest file.",
                     ViteErrorKind::Manifest,
@@ -231,5 +235,44 @@ impl Vite {
     /// Returns the current Vite instance's mode.
     pub fn mode(&self) -> &ViteMode {
         &self.mode
+    }
+}
+
+fn resolve_prefix(prefix: Option<&str>) -> Option<&'static str> {
+    if let Some(prefix) = prefix {
+        if prefix.is_empty() || prefix.eq("/") {
+            return None;
+        }
+
+        let prefix = if let Some(prefix_stripped) = prefix.strip_prefix("/") {
+            prefix_stripped
+        } else {
+            prefix
+        };
+
+        let prefix = if prefix.ends_with("/") {
+            prefix
+        } else {
+            &format!("{}/", prefix)
+        };
+
+        return Some(Box::leak(prefix.to_string().into_boxed_str()));
+    }
+
+    None
+}
+
+#[cfg(test)]
+mod test {
+    use crate::vite::resolve_prefix;
+
+    #[test]
+    fn test_resolve_prefix() {
+        const EXPECTED_RESULT: &str = "bundle/";
+
+        assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("bundle")).unwrap());
+        assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("/bundle")).unwrap());
+        assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("bundle/")).unwrap());
+        assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("/bundle/")).unwrap());
     }
 }
