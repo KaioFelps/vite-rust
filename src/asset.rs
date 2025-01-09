@@ -16,6 +16,18 @@ enum PreloadAsset {
 }
 
 impl Asset {
+    pub fn style_sheet(file: String, prefix: Option<&str>) -> Self {
+        Self::StyleSheet(Self::resolve_prefixed_path(file, prefix))
+    }
+
+    pub fn entry_point(file: String, prefix: Option<&str>) -> Self {
+        Self::EntryPoint(Self::resolve_prefixed_path(file, prefix))
+    }
+
+    pub fn pre_load(file: String, prefix: Option<&str>) -> Self {
+        Self::Preload(Self::resolve_prefixed_path(file, prefix))
+    }
+
     pub fn into_html(self) -> String {
         match self {
             Self::StyleSheet(file) => {
@@ -86,6 +98,13 @@ impl Asset {
         }
 
         PreloadAsset::Unknown
+    }
+
+    pub(crate) fn resolve_prefixed_path(file: String, prefix: Option<&str>) -> String {
+        match prefix {
+            Some(prefix) => format!("{}{}", prefix, file),
+            None => file,
+        }
     }
 }
 
