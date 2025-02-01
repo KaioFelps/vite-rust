@@ -121,6 +121,8 @@ pub struct ViteConfig<'a> {
     pub server_host: Option<&'a str>,
     /// Prefix assets path with the given `str`.
     pub prefix: Option<&'a str>,
+    /// Add a custom domain to prefix every asset URL with.
+    pub app_url: Option<&'a str>,
 }
 
 impl<'a> ViteConfig<'a> {
@@ -169,6 +171,11 @@ impl<'a> ViteConfig<'a> {
         self.prefix = Some(prefix);
         self
     }
+
+    pub fn set_app_url(mut self, app_url: &'a str) -> Self {
+        self.app_url = Some(app_url);
+        self
+    }
 }
 
 impl Default for ViteConfig<'_> {
@@ -190,7 +197,8 @@ impl Default for ViteConfig<'_> {
     ///     enable_dev_server: true,
     ///     server_host: Some("http://localhost:5173"),
     ///     heart_beat_retries_limit: Some(5),
-    ///     prefix: None
+    ///     prefix: None,
+    ///     app_url: None,
     /// };
     ///
     /// let with_defaults_config = ViteConfig::default().set_manifest_path("path/to/manifest.json");
@@ -207,6 +215,7 @@ impl Default for ViteConfig<'_> {
             use_heart_beat_check: true,
             heart_beat_retries_limit: Some(5),
             prefix: None,
+            app_url: None,
         }
     }
 }

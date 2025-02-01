@@ -148,10 +148,10 @@ mod test {
 
         let manifest_expected_with_multiple_directives = r#"
         @vite::react
-        <link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
-        <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
-        <script type="module" src="assets/foo-BRBmoGS9.js"></script>
-        <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
+        <link rel="stylesheet" href="/assets/foo-5UjPuW-k.css" />
+        <link rel="stylesheet" href="/assets/shared-ChJ_j-JJ.css" />
+        <script type="module" src="/assets/foo-BRBmoGS9.js"></script>
+        <link rel="modulepreload" href="/assets/shared-B7PI925R.js" />
         "#;
 
         let dev_expected = r#"
@@ -160,10 +160,10 @@ mod test {
         "#;
 
         let manifest_expected = r#"
-        <link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
-        <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
-        <script type="module" src="assets/foo-BRBmoGS9.js"></script>
-        <link rel="modulepreload" href="assets/shared-B7PI925R.js" />
+        <link rel="stylesheet" href="/assets/foo-5UjPuW-k.css" />
+        <link rel="stylesheet" href="/assets/shared-ChJ_j-JJ.css" />
+        <script type="module" src="/assets/foo-BRBmoGS9.js"></script>
+        <link rel="modulepreload" href="/assets/shared-B7PI925R.js" />
         "#;
 
         // endregion: --- Expectations
@@ -257,6 +257,6 @@ mod test {
         assert_eq!(dev_directive, "http://localhost:5173/baz.js");
 
         manifest.assets_url_directive(&mut manifest_directive);
-        assert_eq!(manifest_directive, "assets/baz-B2H3sXNv.js");
+        assert_eq!(manifest_directive, "/assets/baz-B2H3sXNv.js");
     }
 }

@@ -16,16 +16,16 @@ enum PreloadAsset {
 }
 
 impl Asset {
-    pub fn style_sheet(file: String, prefix: Option<&str>) -> Self {
-        Self::StyleSheet(Self::resolve_prefixed_path(file, prefix))
+    pub fn style_sheet(file: String, prefix: Option<&str>, app_url: &str) -> Self {
+        Self::StyleSheet(Self::resolve_asset_path(file, prefix, app_url))
     }
 
-    pub fn entry_point(file: String, prefix: Option<&str>) -> Self {
-        Self::EntryPoint(Self::resolve_prefixed_path(file, prefix))
+    pub fn entry_point(file: String, prefix: Option<&str>, app_url: &str) -> Self {
+        Self::EntryPoint(Self::resolve_asset_path(file, prefix, app_url))
     }
 
-    pub fn pre_load(file: String, prefix: Option<&str>) -> Self {
-        Self::Preload(Self::resolve_prefixed_path(file, prefix))
+    pub fn pre_load(file: String, prefix: Option<&str>, app_url: &str) -> Self {
+        Self::Preload(Self::resolve_asset_path(file, prefix, app_url))
     }
 
     pub fn into_html(self) -> String {
@@ -100,10 +100,13 @@ impl Asset {
         PreloadAsset::Unknown
     }
 
-    pub(crate) fn resolve_prefixed_path(file: String, prefix: Option<&str>) -> String {
+    pub(crate) fn resolve_asset_path(file: String, prefix: Option<&str>, app_url: &str) -> String {
+        println!("{file}");
+        println!("{prefix:#?}");
+        println!("{app_url}");
         match prefix {
-            Some(prefix) => format!("{}{}", prefix, file),
-            None => file,
+            Some(prefix) => format!("{app_url}/{prefix}/{file}"),
+            None => format!("{app_url}/{file}"),
         }
     }
 }

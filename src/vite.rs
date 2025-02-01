@@ -1,3 +1,5 @@
+use std::env;
+
 use crate::asset::Asset;
 use crate::config::{ViteConfig, ViteMode};
 use crate::error::{ViteError, ViteErrorKind};
@@ -13,6 +15,7 @@ pub struct Vite {
     pub(crate) mode: ViteMode,
     pub(crate) dev_server_host: &'static str,
     pub(crate) prefix: Option<&'static str>,
+    pub(crate) app_url: &'static str,
 }
 
 impl Vite {
@@ -38,10 +41,10 @@ impl Vite {
     ///     let vite = Vite::new(vite_config).await.unwrap();
     ///
     ///     let expected =
-    ///         r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
-    ///         <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
-    ///         <script type="module" src="assets/foo-BRBmoGS9.js"></script>
-    ///         <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#;
+    ///         r#"<link rel="stylesheet" href="/assets/foo-5UjPuW-k.css" />
+    ///         <link rel="stylesheet" href="/assets/shared-ChJ_j-JJ.css" />
+    ///         <script type="module" src="/assets/foo-BRBmoGS9.js"></script>
+    ///         <link rel="modulepreload" href="/assets/shared-B7PI925R.js" />"#;
     ///
     ///     let expected = expected.replace("\t", "     ")
     ///         .lines()
@@ -104,12 +107,15 @@ impl Vite {
 
         let prefix = resolve_prefix(config.prefix);
 
+        let app_url = resolve_app_url(config.app_url);
+
         Ok(Vite {
             entrypoints,
             manifest,
             mode,
             dev_server_host: dev_host,
             prefix,
+            app_url,
         })
     }
 
@@ -122,7 +128,9 @@ impl Vite {
     /// Might panic if the target file doesn't exist.
     pub fn get_tags(&self) -> Result<String, ViteError> {
         match &self.manifest {
-            Some(manifest) => Ok(manifest.generate_html_tags(&self.entrypoints, self.prefix)),
+            Some(manifest) => {
+                Ok(manifest.generate_html_tags(&self.entrypoints, self.prefix, self.app_url))
+            }
             None => Err(ViteError::new(
                 "Tried to get html tags from manifest, but there is no manifest file.",
                 ViteErrorKind::Manifest,
@@ -190,7 +198,7 @@ impl Vite {
         match &self.mode {
             ViteMode::Development => Ok(format!("{}/{}", self.dev_server_host, path)),
             ViteMode::Manifest => match &self.manifest {
-                Some(manifest) => Ok(manifest.get_asset_url(&path, self.prefix)),
+                Some(manifest) => Ok(manifest.get_asset_url(&path, self.prefix, self.app_url)),
                 None => Err(ViteError::new(
                     "Tried to get asset's URL from manifest, but there is no manifest file.",
                     ViteErrorKind::Manifest,
@@ -238,23 +246,14 @@ impl Vite {
     }
 }
 
-fn resolve_prefix(prefix: Option<&str>) -> Option<&'static str> {
+pub(crate) fn resolve_prefix(prefix: Option<&str>) -> Option<&'static str> {
     if let Some(prefix) = prefix {
         if prefix.is_empty() || prefix.eq("/") {
             return None;
         }
 
-        let prefix = if let Some(prefix_stripped) = prefix.strip_prefix("/") {
-            prefix_stripped
-        } else {
-            prefix
-        };
-
-        let prefix = if prefix.ends_with("/") {
-            prefix
-        } else {
-            &format!("{}/", prefix)
-        };
+        let prefix = prefix.strip_prefix("/").unwrap_or(prefix);
+        let prefix = prefix.strip_suffix("/").unwrap_or(prefix);
 
         return Some(Box::leak(prefix.to_string().into_boxed_str()));
     }
@@ -262,17 +261,50 @@ fn resolve_prefix(prefix: Option<&str>) -> Option<&'static str> {
     None
 }
 
+pub(crate) fn resolve_app_url(app_url: Option<&str>) -> &'static str {
+    if let Some(app_url) = app_url {
+        let app_url = app_url.strip_suffix("/").unwrap_or(app_url);
+
+        return Box::leak(app_url.to_string().into_boxed_str());
+    }
+
+    let app_url = if let Ok(app_url) = env::var("APP_URL") {
+        app_url.strip_suffix("/").unwrap_or(&app_url).to_string()
+    } else {
+        String::new()
+    };
+
+    Box::leak(app_url.into_boxed_str())
+}
+
 #[cfg(test)]
 mod test {
-    use crate::vite::resolve_prefix;
+    use std::env;
+
+    use crate::vite::{resolve_app_url, resolve_prefix};
 
     #[test]
     fn test_resolve_prefix() {
-        const EXPECTED_RESULT: &str = "bundle/";
+        const EXPECTED_RESULT: &str = "bundle";
 
         assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("bundle")).unwrap());
         assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("/bundle")).unwrap());
         assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("bundle/")).unwrap());
         assert_eq!(EXPECTED_RESULT, resolve_prefix(Some("/bundle/")).unwrap());
+    }
+    #[test]
+    fn test_resolve_app_url() {
+        const EXPECTED_RESULT: &str = "http://foo.baz";
+
+        assert_eq!(EXPECTED_RESULT, resolve_app_url(Some("http://foo.baz/")));
+        assert_eq!(EXPECTED_RESULT, resolve_app_url(Some("http://foo.baz")));
+
+        assert_eq!(resolve_app_url(None), "");
+
+        env::set_var("APP_URL", "http://foo.baz");
+
+        assert_eq!(resolve_app_url(None), EXPECTED_RESULT);
+
+        env::remove_var("APP_URL");
     }
 }

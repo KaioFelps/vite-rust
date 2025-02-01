@@ -84,12 +84,17 @@ struct ChunkIter<'a> {
     css: &'a [String],
     track: ChunkIterListTrack,
     prefix: Option<&'a str>,
+    app_url: &'a str,
 }
 
 impl Chunk {
     /// Returns an [`Iterator<Item = Asset>`], where the returned assets
     /// are the Chunk's `assets`, `imports` and `css` fields, respectively.
-    pub fn assets_iter(&self, prefix: Option<&'static str>) -> impl Iterator<Item = Asset> + '_ {
+    pub fn assets_iter(
+        &self,
+        prefix: Option<&'static str>,
+        app_url: &'static str,
+    ) -> impl Iterator<Item = Asset> + '_ {
         ChunkIter {
             assets: &self.assets,
             imports: &self.imports,
@@ -97,6 +102,7 @@ impl Chunk {
             index: 0,
             track: ChunkIterListTrack::start(),
             prefix,
+            app_url,
         }
     }
 }
@@ -108,7 +114,7 @@ impl Iterator for ChunkIter<'_> {
         if self.track == ChunkIterListTrack::Assets {
             if let Some(asset) = self.assets.get(self.index) {
                 self.index += 1;
-                return Some(Asset::pre_load(asset.clone(), self.prefix));
+                return Some(Asset::pre_load(asset.clone(), self.prefix, self.app_url));
             } else {
                 self.track = ChunkIterListTrack::Css;
                 self.index = 0;
@@ -118,7 +124,7 @@ impl Iterator for ChunkIter<'_> {
         if self.track == ChunkIterListTrack::Css {
             if let Some(css) = self.css.get(self.index) {
                 self.index += 1;
-                return Some(Asset::style_sheet(css.clone(), self.prefix));
+                return Some(Asset::style_sheet(css.clone(), self.prefix, self.app_url));
             } else {
                 self.track = ChunkIterListTrack::Eot;
                 self.index = 0;

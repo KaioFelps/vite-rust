@@ -79,6 +79,7 @@ impl Manifest {
         &self,
         entrypoints: &Entrypoints,
         prefix: Option<&'static str>,
+        app_url: &'static str,
     ) -> String {
         if self.manifest.is_empty() {
             log::error!("Manifest is empty. Empty string being returned from `Manifest::generate_html_tags`.");
@@ -97,14 +98,19 @@ impl Manifest {
             };
 
             let entry_as_asset = if entry.ends_with(".css") {
-                Asset::style_sheet(entry_chunk.file.clone(), prefix)
+                Asset::style_sheet(entry_chunk.file.clone(), prefix, app_url)
             } else {
-                Asset::entry_point(entry_chunk.file.clone(), prefix)
+                Asset::entry_point(entry_chunk.file.clone(), prefix, app_url)
             };
 
             if !discovered_assets.contains(&entry_as_asset) {
                 discovered_assets.insert(entry_as_asset);
-                self.iterate_over_chunk_assets(&mut discovered_assets, entry_chunk, prefix);
+                self.iterate_over_chunk_assets(
+                    &mut discovered_assets,
+                    entry_chunk,
+                    prefix,
+                    app_url,
+                );
             }
         }
 
@@ -124,8 +130,9 @@ impl Manifest {
         set: &mut HashSet<Asset>,
         chunk: &Chunk,
         prefix: Option<&'static str>,
+        app_url: &'static str,
     ) {
-        for asset in chunk.assets_iter(prefix) {
+        for asset in chunk.assets_iter(prefix, app_url) {
             if !set.contains(&asset) {
                 set.insert(asset);
             }
@@ -134,8 +141,8 @@ impl Manifest {
         if chunk.is_entry {
             chunk.imports.iter().for_each(|import| {
                 let import_chunk = &self.manifest[import];
-                set.insert(Asset::pre_load(import_chunk.file.clone(), prefix));
-                self.iterate_over_chunk_assets(set, import_chunk, prefix);
+                set.insert(Asset::pre_load(import_chunk.file.clone(), prefix, app_url));
+                self.iterate_over_chunk_assets(set, import_chunk, prefix, app_url);
             });
         }
     }
@@ -153,10 +160,15 @@ impl Manifest {
         entries
     }
 
-    pub(crate) fn get_asset_url<'a>(&'a self, asset: &'a str, prefix: Option<&str>) -> String {
+    pub(crate) fn get_asset_url<'a>(
+        &'a self,
+        asset: &'a str,
+        prefix: Option<&str>,
+        app_url: &str,
+    ) -> String {
         match self.manifest.get(asset) {
             None => String::new(),
-            Some(chunk) => Asset::resolve_prefixed_path(chunk.file.clone(), prefix),
+            Some(chunk) => Asset::resolve_asset_path(chunk.file.clone(), prefix, app_url),
         }
     }
 }
@@ -164,18 +176,21 @@ impl Manifest {
 #[cfg(test)]
 mod test {
     use super::Manifest;
-    use crate::test_utils::NormalizeHtmlStrings;
+    use crate::{
+        test_utils::NormalizeHtmlStrings,
+        vite::{resolve_app_url, resolve_prefix},
+    };
 
     #[test]
     fn test_generate_html_tags_1() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let expected = r#"<link rel="stylesheet" href="assets/foo-5UjPuW-k.css" />
-            <link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
-            <script type="module" src="assets/foo-BRBmoGS9.js"></script>
-            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#
+        let expected = r#"<link rel="stylesheet" href="/assets/foo-5UjPuW-k.css" />
+            <link rel="stylesheet" href="/assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="/assets/foo-BRBmoGS9.js"></script>
+            <link rel="modulepreload" href="/assets/shared-B7PI925R.js" />"#
             .__normalize_html_strings();
 
-        let generated = manifest.generate_html_tags(&vec!["views/foo.js".into()], None);
+        let generated = manifest.generate_html_tags(&vec!["views/foo.js".into()], None, "");
 
         assert_eq!(expected, generated);
     }
@@ -183,12 +198,12 @@ mod test {
     #[test]
     fn test_generate_html_tags_2() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let expected = r#"<link rel="stylesheet" href="assets/shared-ChJ_j-JJ.css" />
-            <script type="module" src="assets/bar-gkvgaI9m.js"></script>
-            <link rel="modulepreload" href="assets/shared-B7PI925R.js" />"#
+        let expected = r#"<link rel="stylesheet" href="/assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="/assets/bar-gkvgaI9m.js"></script>
+            <link rel="modulepreload" href="/assets/shared-B7PI925R.js" />"#
             .__normalize_html_strings();
 
-        let generated = manifest.generate_html_tags(&vec!["views/bar.js".into()], None);
+        let generated = manifest.generate_html_tags(&vec!["views/bar.js".into()], None, "");
 
         assert_eq!(expected, generated);
     }
@@ -196,12 +211,52 @@ mod test {
     #[test]
     fn test_generate_html_tags_with_prefix() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let generated = manifest.generate_html_tags(&vec!["views/bar.js".into()], Some("bundle/"));
+        let generated = manifest.generate_html_tags(
+            &vec!["views/bar.js".into()],
+            resolve_prefix(Some("bundle/")),
+            "",
+        );
 
-        let expected = r#"<link rel="stylesheet" href="bundle/assets/shared-ChJ_j-JJ.css" />
-            <script type="module" src="bundle/assets/bar-gkvgaI9m.js"></script>
-            <link rel="modulepreload" href="bundle/assets/shared-B7PI925R.js" />"#
+        let expected = r#"<link rel="stylesheet" href="/bundle/assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="/bundle/assets/bar-gkvgaI9m.js"></script>
+            <link rel="modulepreload" href="/bundle/assets/shared-B7PI925R.js" />"#
             .__normalize_html_strings();
+
+        assert_eq!(expected, generated);
+    }
+
+    #[test]
+    fn test_generate_html_tags_with_app_url() {
+        let manifest = Manifest::new("tests/test-manifest.json").unwrap();
+        let generated = manifest.generate_html_tags(
+            &vec!["views/bar.js".into()],
+            None,
+            resolve_app_url(Some("http://foo.baz")),
+        );
+
+        let expected =
+            r#"<link rel="stylesheet" href="http://foo.baz/assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="http://foo.baz/assets/bar-gkvgaI9m.js"></script>
+            <link rel="modulepreload" href="http://foo.baz/assets/shared-B7PI925R.js" />"#
+                .__normalize_html_strings();
+
+        assert_eq!(expected, generated);
+    }
+
+    #[test]
+    fn test_generate_html_tags_with_prefix_and_app_url() {
+        let manifest = Manifest::new("tests/test-manifest.json").unwrap();
+        let generated = manifest.generate_html_tags(
+            &vec!["views/bar.js".into()],
+            resolve_prefix(Some("bundle/")),
+            resolve_app_url(Some("http://foo.baz")),
+        );
+
+        let expected =
+            r#"<link rel="stylesheet" href="http://foo.baz/bundle/assets/shared-ChJ_j-JJ.css" />
+            <script type="module" src="http://foo.baz/bundle/assets/bar-gkvgaI9m.js"></script>
+            <link rel="modulepreload" href="http://foo.baz/bundle/assets/shared-B7PI925R.js" />"#
+                .__normalize_html_strings();
 
         assert_eq!(expected, generated);
     }
@@ -209,9 +264,9 @@ mod test {
     #[test]
     fn test_get_asset_url() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let generated = manifest.get_asset_url("baz.js", None);
+        let generated = manifest.get_asset_url("baz.js", None, "");
 
-        let expected = "assets/baz-B2H3sXNv.js";
+        let expected = "/assets/baz-B2H3sXNv.js";
 
         assert_eq!(expected, generated);
     }
@@ -219,9 +274,9 @@ mod test {
     #[test]
     fn test_get_asset_url_with_prefix() {
         let manifest = Manifest::new("tests/test-manifest.json").unwrap();
-        let generated = manifest.get_asset_url("baz.js", Some("bundle/"));
+        let generated = manifest.get_asset_url("baz.js", resolve_prefix(Some("bundle/")), "");
 
-        let expected = "bundle/assets/baz-B2H3sXNv.js";
+        let expected = "/bundle/assets/baz-B2H3sXNv.js";
 
         assert_eq!(expected, generated);
     }
