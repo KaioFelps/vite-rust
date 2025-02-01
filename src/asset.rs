@@ -101,9 +101,6 @@ impl Asset {
     }
 
     pub(crate) fn resolve_asset_path(file: String, prefix: Option<&str>, app_url: &str) -> String {
-        println!("{file}");
-        println!("{prefix:#?}");
-        println!("{app_url}");
         match prefix {
             Some(prefix) => format!("{app_url}/{prefix}/{file}"),
             None => format!("{app_url}/{file}"),
