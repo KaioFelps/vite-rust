@@ -3,6 +3,9 @@ Important changes will be mentioned in this file. The project adopts
 [SemVer (Semantic Versioning 2.0.0)](https://semver.org/), as suggested
 by Cargo for its crates.
 
+## v0.2.4
+- Remove debugging calls to `println!` from `resolve_asset_path` function.
+
 ## v0.2.3
 - Add optional `app_url` field to customize the URL to fetch assets from;
 - Looks for a `APP_URL` environment variable to use as `app_url` if none is explicitly provided on Vite Rust setup;
