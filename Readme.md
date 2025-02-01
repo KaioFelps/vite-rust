@@ -92,6 +92,37 @@ vite.vite_directive(&mut template);
 vite.react_directive(&mut template);
 ```
 
+## Prefixes and application URL
+You can prefix all of your assets with the builder's `set_prefix` option. It might be
+useful if the manifest points to "assets/foo.js" but they're being served from
+"foo/bar/assets/foo.js":
+
+```rust
+let vite_config: vite_rust::ViteConfig = vite_rust::ViteConfig::default()
+    .set_manifest_path("path/to/manifest.json")
+    .set_entrypoints(vec!["views/bar.js", "views/foo.js"])
+    .set_prefix("foo/bar");
+```
+
+Sometimes, you need to customize the whole URL where the assets will be served from.
+There are two ways of doing it: from the Vite config or with environment variables.
+
+The former has the priority:
+```rust
+let vite_config: vite_rust::ViteConfig = vite_rust::ViteConfig::default()
+    .set_manifest_path("path/to/manifest.json")
+    .set_entrypoints(vec!["views/bar.js", "views/foo.js"])
+    .set_prefix("https://my-cdn.com");
+```
+
+If it's not set from config, Vite tries to read a `APP_URL` environment variable:
+```
+APP_URL=https://my-cdn.com
+```
+
+Otherwise, it serves from the root of your application ("/"). Of course, you can use both prefix
+and app url together.
+
 ## Little helper for manifest path
 We provide a little path resolver function for finding the manifest file.
 It is experimental and bugs might be found, though:
